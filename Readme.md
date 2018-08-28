@@ -1,5 +1,7 @@
 # sb-mybook-angular
 
+**The Angular client app for this app is branch MYBOOK-ANGULAR-CLIENT-V1**
+
 This application uses file upload with formdata and multipart/form-data request with
 Content-Type: multipart/form-data.
 
