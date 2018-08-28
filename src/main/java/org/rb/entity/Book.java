@@ -46,7 +46,7 @@ public class Book implements Serializable{
 	}
 
 	public void makeCopyFrom(Book other) {
-		this.id = other.id;
+		//this.id = other.id;
 		this.title = other.title;
 		this.author = other.author;
 		this.pages = other.pages;

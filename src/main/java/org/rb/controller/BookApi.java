@@ -7,9 +7,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Optional;
 
 import javax.servlet.ServletOutputStream;
@@ -47,8 +44,8 @@ public class BookApi {
 	@Autowired
 	private SessionRequestCounter sessionRequestCounter;
 
-	private SimpleDateFormat sf = new SimpleDateFormat("yyyy-MM-dd");
-
+	
+	
 	@GetMapping(path = "/books")
 	public Iterable<Book> getBooks() {
 		System.out.println("getBooks....");
@@ -62,34 +59,28 @@ public class BookApi {
 	}
 
 	/**
-	 * Save the new book fields received by multipart/form-data request
-	 * @param file
-	 * @param id
-	 * @param title
-	 * @param author
-	 * @param pages
+	 * This method put image for previously saved book entity.
+	 * <pre>
+	 * Requirement for request order: 
+	 * 1) post request to save book without image
+	 * 2) post request to send image for the book.
+	 * </pre>
+	 * @param id previously saved book's id
+	 * @param file image file to be saved
 	 * @param request
-	 * @return
+	 * @return status
 	 */
-	@PostMapping(path = "/books")
-	public ResponseEntity<HttpStatus> postBook(
-			@RequestParam(name = "file", required = false) MultipartFile file,
-			@RequestParam("id") long id, @RequestParam("title") String title,
-			@RequestParam("author") String author,
-			@RequestParam("pages") int pages, 
-			@RequestParam("publishDate") String pubDate,
-			HttpServletRequest request) {
-		
-		
-		Book book;
-		try {
-			book = new Book(title, author, pages, sf.parse(pubDate));
-		} catch (ParseException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return  ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
-		}
-		book.setId(id);
+	@PostMapping(path = "/books/image/{id}")
+	public ResponseEntity<HttpStatus> postImage(
+			@PathVariable("id") long id,
+			@RequestParam(name = "file") MultipartFile file,
+			HttpServletRequest request
+			){
+	
+		Optional<Book> obook = repo.findById(id);
+		if(!obook.isPresent())
+			 return ResponseEntity.badRequest().build();
+		Book book = obook.get();
 		System.out.println("Post: " + book);
 		MultipartFile[] fileDatas = new MultipartFile[1];
 		fileDatas[0] = file;
@@ -97,7 +88,21 @@ public class BookApi {
 		putBookImage(request, book, fileDatas);
 
 		repo.save(book);
-		return ResponseEntity.status(HttpStatus.CREATED).build();
+		
+		return ResponseEntity.ok().build();
+			
+	}
+	
+	/**
+	 * Save the new book 
+	 * @param book book to be saved
+	 * @return saved book (containing id)
+	 */
+	@PostMapping(path = "/books")
+	public ResponseEntity<Book> postBook(Book book ) {
+		
+		Book sbook = repo.save(book);
+		return ResponseEntity.status(HttpStatus.CREATED).body(sbook);
 	}
 
 	@GetMapping(path = "/books/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -109,43 +114,27 @@ public class BookApi {
 	}
 
 	/**
-	 * Save existing book (with id) fields received by multipart/form-data request
-	 * @param request
-	 * @param id
-	 * @param file
-	 * @param title
-	 * @param author
-	 * @param pages
+	 * Update existing book (with id) 
+	 * @param book
 	 * @return
 	 */
 	@PutMapping(path = "/books/{id}")
-	public Book putBookById(HttpServletRequest request, 
+	public ResponseEntity<Book> putBookById(
 			@PathVariable("id") long id,
-			@RequestParam(name = "file", required = false) MultipartFile file, 
-			@RequestParam("title") String title,
-			@RequestParam("author") String author, 
-			@RequestParam("pages") int pages,
-			@RequestParam("publishDate") String pubDate) {
-
-		
-		Book newBook;
-		try {
-			newBook = new Book(title, author, pages,sf.parse(pubDate));
-		} catch (ParseException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return null;
-		}
-		newBook.setId(id);
-		System.out.println("putBookById: " + newBook);
+			Book book
+			) {
 
 		Optional<Book> obook = repo.findById(id);
-		Book book = obook.get();
-		book.makeCopyFrom(newBook);
-		putBookImage(request, book, file);
+		if( !obook.isPresent() ) {
+			return ResponseEntity.badRequest().build();
+		}
+		Book oldbook = obook.get();
+		//update book
+		oldbook.makeCopyFrom(book);
+		repo.save(oldbook);
 		
 
-		return repo.save(book);
+		return ResponseEntity.ok(oldbook);
 	}
 
 	@DeleteMapping(path = "/books/{id}")
@@ -195,6 +184,8 @@ public class BookApi {
 		book.setCoverImage(getUploadedImage());
 	}
 
+	
+	@SuppressWarnings("unused")
 	private synchronized void putBookImage(HttpServletRequest request, Book book, MultipartFile fileData) {
 
 		doFileUpload(request, fileData);
