@@ -53,6 +53,14 @@ public class Book implements Serializable{
 		this.publishDate = other.publishDate;
 		
 	}
+
+	@Override
+	public String toString() {
+		return "Book [id=" + id + ", title=" + title + ", author=" + author + ", pages=" + pages + ", publishDate="
+				+ publishDate + ", coverImage=" + ((coverImage==null)?"NULL":"HasImg") + "]";
+	}
+	
+	
 	
 
 }

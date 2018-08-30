@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -85,8 +86,8 @@ public class BookApi {
 		MultipartFile[] fileDatas = new MultipartFile[1];
 		fileDatas[0] = file;
 
-		putBookImage(request, book, fileDatas);
-
+		putBookImageViaMemory(request, book, fileDatas[0]);
+		
 		repo.save(book);
 		
 		return ResponseEntity.ok().build();
@@ -99,7 +100,7 @@ public class BookApi {
 	 * @return saved book (containing id)
 	 */
 	@PostMapping(path = "/books")
-	public ResponseEntity<Book> postBook(Book book ) {
+	public ResponseEntity<Book> postBook(@RequestBody Book book ) {
 		
 		Book sbook = repo.save(book);
 		return ResponseEntity.status(HttpStatus.CREATED).body(sbook);
@@ -121,7 +122,7 @@ public class BookApi {
 	@PutMapping(path = "/books/{id}")
 	public ResponseEntity<Book> putBookById(
 			@PathVariable("id") long id,
-			Book book
+			@RequestBody Book book
 			) {
 
 		Optional<Book> obook = repo.findById(id);
@@ -177,22 +178,25 @@ public class BookApi {
 
 	// ---------------Helpers-------------------//
 
-	private synchronized void putBookImage(HttpServletRequest request, Book book, MultipartFile[] fileDatas) {
+	@SuppressWarnings("unused")
+	private synchronized void putBookImageViaMemory(HttpServletRequest request, Book book, MultipartFile fileData) {
 
-		doFileUpload(request, fileDatas);
-
-		book.setCoverImage(getUploadedImage());
+		//MultipartFile fileData = fileDatas[0];
+		byte[] bimg= uploadOneFileBytes(request,fileData);
+		book.setCoverImage(bimg);
 	}
 
-	
 	@SuppressWarnings("unused")
-	private synchronized void putBookImage(HttpServletRequest request, Book book, MultipartFile fileData) {
+	private synchronized void putBookImageViaFile(HttpServletRequest request, Book book, MultipartFile fileData) {
 
 		doFileUpload(request, fileData);
 
 		book.setCoverImage(getUploadedImage());
+		
 	}
-
+	
+	
+	@SuppressWarnings("unused")
 	private void doFileUpload(HttpServletRequest request, MultipartFile fileData) {
 		if (fileData == null)
 			return;
@@ -202,6 +206,19 @@ public class BookApi {
 
 	}
 
+	private byte[] uploadOneFileBytes(HttpServletRequest request, MultipartFile fileData) {
+		if (fileData == null)
+			return null;
+		byte[] imagBytes = null;
+		try {
+			imagBytes = fileData.getBytes();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return imagBytes;
+	}
+	
 	private void doFileUpload(HttpServletRequest request, MultipartFile[] fileDatas) {
 
 		if (fileDatas == null)
@@ -240,6 +257,7 @@ public class BookApi {
 	 * Only one image file used!
 	 * @return
 	 */
+	@SuppressWarnings("unused")
 	private byte[] getUploadedImage() {
 		if (uploadRootPath == null)
 			return null;
