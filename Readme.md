@@ -1,4 +1,4 @@
-# sb-mybook-angular
+# sb-mybook-angular V1
 
 **The Angular client app for this app is branch MYBOOK-ANGULAR-CLIENT-V1**
 
